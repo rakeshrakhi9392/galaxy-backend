@@ -13,7 +13,7 @@ export default defineConfig({
     // node_modules at runtime (bundling rewrites paths into .trigger/tmp without
     // copying the executables → spawn ENOENT).
     external: ["ffmpeg-static", "ffprobe-static"],
-    // Install system FFmpeg in deployed workers and set FFMPEG_PATH / FFPROBE_PATH.
+    // Install system FFmpeg in deployed workers and set 
     // Local `trigger dev` uses ffmpeg-static via the resolver in lib/ffmpeg/binaries.ts.
     extensions: [ffmpeg({ version: "7" })],
   },
