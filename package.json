@@ -34,7 +34,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@transloadit/node": "^4.11.0",
-    "@trigger.dev/sdk": "4.5.0",
+    "@trigger.dev/sdk": "4.5.1",
     "@unkey/api": "^2.3.4",
     "@unkey/ratelimit": "^2.1.0",
     "ffmpeg-static": "^5.3.0",
@@ -47,7 +47,7 @@
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
-    "@trigger.dev/build": "4.5.0",
+    "@trigger.dev/build": "4.5.1",
     "trigger.dev": "4.5.0",
     "@types/ffmpeg-static": "^5.1.0",
     "@types/node": "^20",

@@ -18,4 +18,3 @@ export default defineConfig({
     extensions: [ffmpeg({ version: "7" })],
   },
 });
-
