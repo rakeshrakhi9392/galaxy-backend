@@ -1,0 +1,104 @@
+---
+title: Errors & Rate Limits
+description: API error format, status codes, and rate limiting behavior
+---
+
+Galaxy returns consistent JSON errors across all endpoints.
+
+## Error shape
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Workflow not found",
+    "cause": "optional_machine_readable_cause",
+    "metadata": {},
+    "retryability": "none"
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `code` | Stable error category (see table below) |
+| `message` | Human-readable description |
+| `cause` | Optional detail for logging |
+| `metadata` | Structured extras (e.g. credit balance, rate limit reset) |
+| `retryability` | `none`, `retry_after`, or `backoff` |
+
+## Error codes
+
+| Code | HTTP | When |
+| --- | --- | --- |
+| `BAD_REQUEST` | 400 | Invalid JSON, validation failure, unknown node ID |
+| `UNAUTHORIZED` | 401 | Missing or invalid Bearer token / API key |
+| `FORBIDDEN` | 403 | Authenticated but not permitted |
+| `NOT_FOUND` | 404 | Workflow, run, or key not found |
+| `RATE_LIMITED` | 429 | Per-key rate limit exceeded |
+| `INSUFFICIENT_CREDITS` | 402 | Account balance too low to start run |
+| `INVALID_GRAPH` | 400 | Cycle or invalid graph structure |
+| `INTERNAL_ERROR` | 500/503 | Server or provider failure |
+
+## Rate limiting
+
+Rate limits apply **per API key** via [Unkey](https://unkey.com).
+
+When limited:
+
+```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 42
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Rate limit exceeded",
+    "retryability": "retry_after",
+    "metadata": { "remaining": 0, "reset": 42 }
+  }
+}
+```
+
+| Header / field | Meaning |
+| --- | --- |
+| `Retry-After` | Seconds until the window resets |
+| `metadata.remaining` | Requests left in current window |
+| `metadata.reset` | Seconds until reset |
+
+Default: **100 requests per 60 seconds** per key (configurable via `UNKEY_RATELIMIT_*` env vars).
+
+### Retry strategy
+
+For `retry_after` errors, wait at least `Retry-After` seconds before retrying.
+
+For `backoff` errors (`INTERNAL_ERROR`), use exponential backoff with jitter.
+
+## Credit errors
+
+```json
+{
+  "error": {
+    "code": "INSUFFICIENT_CREDITS",
+    "message": "Insufficient credits: need 1,500, balance 200.",
+    "metadata": { "required": 1500, "balance": 200 }
+  }
+}
+```
+
+Check balance: `GET /api/v1/credits/balance`
+
+## Validation errors
+
+Zod validation failures return `400 BAD_REQUEST` with `details` containing field-level issues:
+
+```json
+{
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "Validation failed",
+    "details": [ … ]
+  }
+}
+```

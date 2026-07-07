@@ -1,0 +1,205 @@
+---
+title: Examples
+description: Practical API integration examples in curl, Python, and JavaScript
+---
+
+Copy-paste examples for common integration patterns. Replace placeholders with your values.
+
+## Variables
+
+```bash
+export GALAXY_API_KEY="gal_live_your_key"
+export GALAXY_BASE="https://api.galaxy.ai/api/v1"
+export WORKFLOW_ID="your_workflow_id"
+```
+
+For local dev:
+
+```bash
+export GALAXY_BASE="http://localhost:4010/api/v1"
+export GALAXY_API_KEY="gal_dev_test_key_12345"
+```
+
+---
+
+## List workflows
+
+<CodeGroup>
+
+```bash curl
+curl "$GALAXY_BASE/workflows" \
+  -H "Authorization: Bearer $GALAXY_API_KEY"
+```
+
+```python Python
+import os, requests
+
+resp = requests.get(
+    f"{os.environ['GALAXY_BASE']}/workflows",
+    headers={"Authorization": f"Bearer {os.environ['GALAXY_API_KEY']}"},
+)
+resp.raise_for_status()
+print(resp.json())
+```
+
+```javascript JavaScript
+const res = await fetch(`${process.env.GALAXY_BASE}/workflows`, {
+  headers: { Authorization: `Bearer ${process.env.GALAXY_API_KEY}` },
+});
+const data = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+---
+
+## Start a run and poll until complete
+
+<CodeGroup>
+
+```bash curl
+# Start
+RUN=$(curl -s -X POST "$GALAXY_BASE/workflows/$WORKFLOW_ID/runs" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"idempotencyKey":"demo-run-1"}')
+
+RUN_ID=$(echo "$RUN" | jq -r '.run.id')
+echo "Run ID: $RUN_ID"
+
+# Poll
+while true; do
+  STATUS=$(curl -s "$GALAXY_BASE/runs/$RUN_ID" \
+    -H "Authorization: Bearer $GALAXY_API_KEY" | jq -r '.run.status')
+  echo "Status: $STATUS"
+  case "$STATUS" in
+    SUCCESS|FAILED|CANCELLED) break ;;
+    *) sleep 2 ;;
+  esac
+done
+
+curl -s "$GALAXY_BASE/runs/$RUN_ID" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" | jq .
+```
+
+```python Python
+import os, time, requests
+
+BASE = os.environ["GALAXY_BASE"]
+HEADERS = {"Authorization": f"Bearer {os.environ['GALAXY_API_KEY']}"}
+workflow_id = os.environ["WORKFLOW_ID"]
+
+run = requests.post(
+    f"{BASE}/workflows/{workflow_id}/runs",
+    headers=HEADERS,
+    json={"idempotencyKey": "demo-run-1"},
+).json()
+run_id = run["run"]["id"]
+
+while True:
+    data = requests.get(f"{BASE}/runs/{run_id}", headers=HEADERS).json()
+    status = data["run"]["status"]
+    print(f"Status: {status}")
+    if status in ("SUCCESS", "FAILED", "CANCELLED"):
+        break
+    time.sleep(2)
+
+print(data)
+```
+
+```javascript JavaScript
+const BASE = process.env.GALAXY_BASE;
+const headers = { Authorization: `Bearer ${process.env.GALAXY_API_KEY}` };
+
+const start = await fetch(`${BASE}/workflows/${process.env.WORKFLOW_ID}/runs`, {
+  method: "POST",
+  headers: { ...headers, "Content-Type": "application/json" },
+  body: JSON.stringify({ idempotencyKey: "demo-run-1" }),
+});
+const { run } = await start.json();
+
+let data;
+while (true) {
+  const res = await fetch(`${BASE}/runs/${run.id}`, { headers });
+  data = await res.json();
+  console.log("Status:", data.run.status);
+  if (["SUCCESS", "FAILED", "CANCELLED"].includes(data.run.status)) break;
+  await new Promise((r) => setTimeout(r, 2000));
+}
+console.log(data);
+```
+
+</CodeGroup>
+
+---
+
+## Run a single node
+
+Execute only one node and its upstream dependencies:
+
+```bash
+curl -X POST "$GALAXY_BASE/workflows/$WORKFLOW_ID/runs" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"targetNodeIds": ["llm_1"]}'
+```
+
+---
+
+## Create and revoke an API key
+
+Requires Clerk session or existing API key:
+
+```bash
+# Create
+curl -X POST "$GALAXY_BASE/api-keys" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CI Pipeline"}'
+
+# List (masked)
+curl "$GALAXY_BASE/api-keys" \
+  -H "Authorization: Bearer $GALAXY_API_KEY"
+
+# Revoke
+curl -X DELETE "$GALAXY_BASE/api-keys/{apiKeyId}" \
+  -H "Authorization: Bearer $GALAXY_API_KEY"
+```
+
+---
+
+## Register a webhook
+
+```bash
+curl -X POST "$GALAXY_BASE/webhooks" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/galaxy/webhooks",
+    "events": ["RUN_COMPLETED", "RUN_FAILED"]
+  }'
+```
+
+Store the returned `secret` and verify signatures per the [Webhooks](/webhooks) guide.
+
+---
+
+## Estimate credits before running
+
+```bash
+curl -X POST "$GALAXY_BASE/workflows/estimate-credits" \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"workflowId\": \"$WORKFLOW_ID\"}"
+```
+
+---
+
+## Fetch node catalog (no auth)
+
+```bash
+curl "$GALAXY_BASE/nodes"
+```
+
+Useful for discovering node types and handle IDs when constructing graphs programmatically.

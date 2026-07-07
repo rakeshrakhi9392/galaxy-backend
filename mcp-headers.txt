@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+cache-control: no-cache
+connection: keep-alive
+content-type: text/event-stream
+mcp-session-id: 34bd0897-f6b8-4b59-b623-aad2550d6cc3
+Date: Mon, 06 Jul 2026 14:15:57 GMT
+Transfer-Encoding: chunked
+

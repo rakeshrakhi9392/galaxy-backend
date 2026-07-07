@@ -1,0 +1,171 @@
+---
+title: Workflows
+description: Create, manage, and execute workflows via the REST API
+---
+
+Workflows are directed graphs of nodes. The API lets you manage workflow definitions and execute them programmatically.
+
+## Workflow object
+
+A workflow contains metadata and a `graph` (nodes + edges):
+
+```json
+{
+  "id": "clx…",
+  "name": "My Workflow",
+  "description": "Optional description",
+  "type": "USER",
+  "graph": {
+    "nodes": [ … ],
+    "edges": [ … ]
+  },
+  "version": 1,
+  "createdAt": "2026-07-06T00:00:00.000Z",
+  "updatedAt": "2026-07-06T00:00:00.000Z"
+}
+```
+
+Graph structure matches what the Galaxy canvas editor persists. You can build workflows in the UI and execute them via API using the workflow ID.
+
+## Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/workflows` | List workflows (paginated) |
+| `POST` | `/workflows` | Create a workflow |
+| `GET` | `/workflows/{id}` | Get workflow by ID |
+| `PUT` | `/workflows/{id}` | Save workflow graph (nodes, edges, viewport) |
+| `PATCH` | `/workflows/{id}` | Update name or description |
+| `DELETE` | `/workflows/{id}` | Delete workflow |
+| `GET` | `/workflows/{id}/runs` | List recent runs |
+| `POST` | `/workflows/{id}/runs` | **Start a run** |
+| `POST` | `/runs/{id}/cancel` | Cancel a queued or running run |
+| `POST` | `/workflows/estimate-credits` | Estimate credits for a graph |
+| `POST` | `/workflows/validate-limits` | Validate provider input limits |
+| `GET` | `/system-workflows` | List system workflow templates |
+| `GET` | `/system-workflows/{slug}` | Get a system workflow by slug |
+
+## Starting a run
+
+```bash
+POST /workflows/{workflowId}/runs
+```
+
+Request body (all fields optional):
+
+```json
+{
+  "scope": "FULL",
+  "targetNodeIds": [],
+  "idempotencyKey": "my-unique-key-123",
+  "graph": null
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `targetNodeIds` | Run a subset of nodes. Empty = full workflow from entry points. |
+| `idempotencyKey` | Safe retry key. Duplicate requests return the existing run. |
+| `graph` | Optional graph override for this run only. |
+
+### Run scopes
+
+Scope is derived from `targetNodeIds`:
+
+| Scope | Condition |
+| --- | --- |
+| `FULL` | No target IDs — execute from workflow entry points |
+| `SINGLE` | Exactly one target node (+ upstream closure) |
+| `SELECTION` | Multiple target nodes (+ shared upstream closure) |
+
+The orchestrator topologically sorts nodes, runs independent branches in parallel, and skips downstream nodes when an upstream node fails.
+
+## Polling run status
+
+```bash
+GET /runs/{runId}
+```
+
+Response includes the run and all `nodeRuns`:
+
+```json
+{
+  "run": {
+    "id": "run_…",
+    "workflowId": "wf_…",
+    "status": "SUCCESS",
+    "initiator": "API",
+    "estimatedCredits": 1500,
+    "actualCredits": 1500,
+    "startedAt": "…",
+    "finishedAt": "…",
+    "errorSummary": null
+  },
+  "nodeRuns": [
+    {
+      "id": "nr_…",
+      "nodeId": "request_1",
+      "nodeType": "request",
+      "status": "SUCCESS",
+      "output": { "field_prompt": "Hello" }
+    }
+  ]
+}
+```
+
+## Cancelling a run
+
+```bash
+POST /runs/{runId}/cancel
+```
+
+Cancels a run in `QUEUED` or `RUNNING` status. Returns the updated run object with `status: CANCELLED`.
+
+### Run statuses
+
+| Status | Meaning |
+| --- | --- |
+| `QUEUED` | Enqueued, waiting for Trigger.dev worker |
+| `RUNNING` | Orchestrator is executing nodes |
+| `SUCCESS` | All scheduled nodes completed |
+| `FAILED` | One or more nodes failed or credits exhausted |
+| `CANCELLED` | Run was cancelled mid-execution |
+| `SKIPPED` | Node skipped (upstream failure or insufficient credits) |
+
+Poll until `status` is terminal (`SUCCESS`, `FAILED`, or `CANCELLED`).
+
+## Idempotency
+
+Pass a stable `idempotencyKey` when starting runs:
+
+```json
+{ "idempotencyKey": "invoice-1234-run-1" }
+```
+
+If a run with the same `(workflowId, idempotencyKey)` already exists, the API returns **201** with the existing run — no duplicate charge.
+
+## Credit checks
+
+Before enqueueing, the API:
+
+1. Estimates credits for the execution subgraph
+2. Verifies the account balance
+3. Returns **402 INSUFFICIENT_CREDITS** if balance is too low
+
+Use `POST /workflows/estimate-credits` to preview cost before running.
+
+## Initiator tracking
+
+Runs record how they were started:
+
+| `initiator` | Source |
+| --- | --- |
+| `UI` | Galaxy canvas or Playground |
+| `API` | Bearer API key |
+| `MCP` | Model Context Protocol ([MCP server](/mcp-server/overview)) |
+
+API-initiated runs also store `apiKeyId` for audit when using `gal_` keys.
+
+## Realtime (UI only)
+
+The UI uses Trigger.dev public tokens and SSE for live progress. External API consumers should **poll** `GET /runs/{id}` or use [webhooks](/webhooks).

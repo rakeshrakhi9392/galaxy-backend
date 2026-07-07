@@ -1,0 +1,151 @@
+---
+title: Nodes
+description: Available workflow node types and the public node catalog
+---
+
+Nodes are the building blocks of workflows. Each node has a type, input schema, output schema, and optional provider chain.
+
+## Node catalog endpoint
+
+List all registered node definitions (public, no auth):
+
+```bash
+GET /api/v1/nodes
+```
+
+Response:
+
+```json
+{
+  "nodes": [
+    {
+      "type": "llm",
+      "ui": {
+        "title": "Gemini Flash Latest",
+        "description": "Generate text using Gemini Flash Latest via OpenRouter",
+        "category": "llm",
+        "handles": [ … ]
+      }
+    }
+  ]
+}
+```
+
+Use this to discover handle IDs, field definitions, and categories when building graphs programmatically.
+
+## Estimate node credits
+
+```bash
+POST /api/v1/nodes/estimate-credits
+Authorization: Bearer gal_…
+Content-Type: application/json
+
+{
+  "nodeType": "gpt-image-2",
+  "inputs": { "prompt": "A fox", "quality": "high", "n": 1 }
+}
+```
+
+## Available node types
+
+### Input / Output
+
+| Type | Name | Category | Description |
+| --- | --- | --- | --- |
+| `request` | Request-Inputs | input | Define dynamic input fields exposed to API/Playground callers |
+| `response` | Response | output | Collect upstream outputs into the final workflow response |
+
+Every executable workflow typically starts with a **request** node and ends with a **response** node.
+
+### LLM
+
+| Type | Name | Category | Description |
+| --- | --- | --- | --- |
+| `llm` | Gemini Flash Latest | llm | Text generation via OpenRouter (`google/gemini-2.0-flash-exp:free`) |
+
+Key inputs: `prompt`, `temperature`, `max_tokens`, optional image URLs for multimodal.
+
+### Image
+
+| Type | Name | Category | Description |
+| --- | --- | --- | --- |
+| `gpt-image-2` | GPT Image 2 | image | OpenAI image generation with text-to-image and image-to-image modes |
+
+Key inputs: `prompt`, `quality`, `size`, `n`, `output_format`, optional input images.
+
+### Video
+
+| Type | Name | Category | Description |
+| --- | --- | --- | --- |
+| `kling-v3-pro` | Kling v3 Pro | video | Premium video generation with start/end frame support |
+
+Key inputs: `prompt`, `mode`, `aspect_ratio`, `duration`, optional reference images.
+
+### Media processing
+
+| Type | Name | Category | Description |
+| --- | --- | --- | --- |
+| `merge-video` | Merge Videos | video | Concatenate multiple videos with transitions |
+| `merge-av` | Merge Audio & Video | video | Combine separate audio and video tracks |
+| `extract-audio` | Extract Audio | audio | Extract audio track from a video file |
+
+These nodes expect HTTPS URLs to media assets (upload via `POST /api/v1/uploads`).
+
+## Graph structure
+
+Each node in a workflow graph:
+
+```json
+{
+  "id": "llm_1",
+  "type": "llm",
+  "position": { "x": 400, "y": 200 },
+  "data": {
+    "label": "Gemini Flash Latest",
+    "inputs": {
+      "prompt": "Summarize this",
+      "temperature": 0.7
+    }
+  }
+}
+```
+
+Edges connect output handles to input handles:
+
+```json
+{
+  "id": "e1",
+  "source": "request_1",
+  "target": "llm_1",
+  "sourceHandle": "out:field_prompt",
+  "targetHandle": "in:prompt"
+}
+```
+
+## Execution behavior
+
+| Node kind | Execution |
+| --- | --- |
+| `request`, `response` | Inline in orchestrator (fast, no Trigger child task) |
+| Provider nodes (`llm`, `gpt-image-2`, etc.) | Trigger.dev child tasks with retry/fallback chains |
+
+Provider nodes support configurable provider chains with timeout and fallback. Failures propagate to downstream nodes (marked `SKIPPED`).
+
+## Provider input limits
+
+Before run enqueue, validate limits:
+
+```bash
+POST /api/v1/workflows/validate-limits
+Content-Type: application/json
+
+{
+  "graph": { "nodes": [ … ], "edges": [ … ] }
+}
+```
+
+Returns validation errors for oversized images, invalid video counts, etc.
+
+## Adding new node types
+
+Node types are registered in the backend catalog (`backend/src/nodes/catalog/`). Each node is a self-contained definition with Zod schemas, UI config, and execute handler. The `/nodes` endpoint reflects the registry automatically after deploy.

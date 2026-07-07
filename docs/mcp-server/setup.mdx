@@ -1,0 +1,76 @@
+---
+title: "MCP Setup"
+description: "Connect Claude Code, Claude Desktop, or Cursor to the Galaxy MCP server."
+---
+
+Use your Galaxy API key from **Workflows → Settings → API Keys**.
+
+## Cursor
+
+Add to `.cursor/mcp.json` (or Cursor MCP settings):
+
+```json
+{
+  "mcpServers": {
+    "galaxy": {
+      "url": "http://localhost:4010/api/mcp",
+      "headers": {
+        "Authorization": "Bearer gal_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+Replace the URL with your deployed backend in production.
+
+## Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "galaxy": {
+      "url": "http://localhost:4010/api/mcp",
+      "headers": {
+        "Authorization": "Bearer gal_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+## Claude Code
+
+```bash
+claude mcp add galaxy --transport http http://localhost:4010/api/mcp \
+  --header "Authorization: Bearer gal_your_api_key_here"
+```
+
+## Windsurf
+
+Add to Windsurf MCP settings (same HTTP transport as Cursor):
+
+```json
+{
+  "mcpServers": {
+    "galaxy": {
+      "url": "http://localhost:4010/api/mcp",
+      "headers": {
+        "Authorization": "Bearer gal_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+## Verify
+
+Ask your assistant to call `get_balance` or `list_node_types`. You should see JSON with your credit balance or the node catalog.
+
+## Notes
+
+- MCP runs are recorded with initiator `MCP` in run history.
+- Session state is kept in memory on the backend process — restart clears active MCP sessions.
+- Use `get_run_status` to poll long-running workflow executions.

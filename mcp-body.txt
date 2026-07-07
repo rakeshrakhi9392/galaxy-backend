@@ -1,0 +1,3 @@
+event: message
+data: {"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"galaxy-workflow-builder","version":"1.0.0","websiteUrl":"https://galaxy.ai/docs/mcp-server"}},"jsonrpc":"2.0","id":1}
+

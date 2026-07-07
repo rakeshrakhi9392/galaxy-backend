@@ -1,0 +1,69 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Galaxy API",
+  "description": "REST API for executing Galaxy AI workflows programmatically.",
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Dashboard",
+        "href": "https://galaxy.ai"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get API Key",
+      "href": "https://galaxy.ai/workflows/settings/api-keys"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["introduction", "setup", "authentication", "quickstart"]
+          },
+          {
+            "group": "Guides",
+            "pages": ["workflows", "nodes", "webhooks", "errors"]
+          },
+          {
+            "group": "Examples",
+            "pages": ["examples"]
+          }
+        ]
+      },
+      {
+        "tab": "MCP Server",
+        "groups": [
+          {
+            "group": "MCP Server",
+            "pages": [
+              "mcp-server/overview",
+              "mcp-server/setup",
+              "mcp-server/tools"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": "openapi.json"
+      }
+    ]
+  },
+  "api": {
+    "openapi": "openapi.json",
+    "playground": {
+      "display": "interactive"
+    }
+  }
+}

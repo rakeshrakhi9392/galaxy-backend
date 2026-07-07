@@ -1,0 +1,61 @@
+---
+title: "MCP Tools"
+description: "Tools exposed by the Galaxy MCP server."
+---
+
+## Account
+
+| Tool | Description |
+| --- | --- |
+| `get_balance` | Current credit balance (microcredits + formatted string) |
+| `estimate_credits` | Estimate cost for a workflow graph or node list |
+
+## Workflows
+
+| Tool | Description |
+| --- | --- |
+| `list_system_workflows` | Pre-built templates |
+| `list_workflows` | Saved user workflows (paginated) |
+| `get_workflow` | Full workflow document |
+| `create_workflow` | Scaffold with Request + Response nodes |
+| `update_workflow` | Rename / update description |
+| `delete_workflow` | Delete a user workflow |
+
+## Workflow Builder
+
+| Tool | Description |
+| --- | --- |
+| `list_node_types` | Catalog with ports and categories |
+| `add_node` | Add a processing node |
+| `update_node` | Update node input values |
+| `connect_nodes` | Wire outputs to inputs (validated) |
+| `disconnect_nodes` | Remove an edge |
+| `delete_node` | Remove a node and its edges |
+
+Port IDs match the canvas handles, e.g. `in:prompt`, `out:output`. Request node outputs use dynamic field IDs.
+
+## Workflow Runs
+
+| Tool | Description |
+| --- | --- |
+| `start_run` | Start by workflow ID or name; pass `values` for request fields |
+| `list_runs` | List runs (optional workflow/status filters) |
+| `get_run_status` | Poll status, node runs, and response results |
+| `cancel_run` | Cancel a queued or running run |
+
+## Typical flows
+
+**Build and run**
+
+1. `list_node_types`
+2. `create_workflow`
+3. `add_node` + `connect_nodes`
+4. `estimate_credits`
+5. `start_run` with `values`
+6. `get_run_status` until `completed: true`
+
+**Run a template**
+
+1. `list_system_workflows`
+2. `start_run` with template name and request `values`
+3. `get_run_status`

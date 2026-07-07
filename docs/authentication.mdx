@@ -1,0 +1,99 @@
+---
+title: Authentication
+description: API key authentication and rate limiting for the Galaxy REST API
+---
+
+Galaxy uses **API keys** for programmatic access. Keys are prefixed with `gal_` and passed as Bearer tokens.
+
+## Creating an API key
+
+### Via the Galaxy UI
+
+Navigate to **Settings → API Keys** in the workflow builder and click **Create key**. The full secret is shown **once** — store it securely.
+
+### Via the API
+
+Requires an existing session (Clerk JWT) or an already-valid API key:
+
+```bash
+curl -X POST https://api.galaxy.ai/api/v1/api-keys \
+  -H "Authorization: Bearer gal_live_…" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Production"}'
+```
+
+Response:
+
+```json
+{
+  "apiKey": {
+    "id": "clx…",
+    "name": "Production",
+    "keyPrefix": "gal_live_ab",
+    "lastUsedAt": null,
+    "createdAt": "2026-07-06T00:00:00.000Z",
+    "revokedAt": null
+  },
+  "secret": "gal_live_abc123…"
+}
+```
+
+<Warning>
+  The `secret` field is only returned at creation time. List endpoints return masked `keyPrefix` values only.
+</Warning>
+
+## Using your API key
+
+Include the key in the `Authorization` header on every request:
+
+```bash
+curl https://api.galaxy.ai/api/v1/workflows \
+  -H "Authorization: Bearer gal_live_abc123…"
+```
+
+## Listing and revoking keys
+
+```bash
+# List (masked)
+curl https://api.galaxy.ai/api/v1/api-keys \
+  -H "Authorization: Bearer gal_live_…"
+
+# Revoke
+curl -X DELETE https://api.galaxy.ai/api/v1/api-keys/{apiKeyId} \
+  -H "Authorization: Bearer gal_live_…"
+```
+
+## Rate limiting
+
+Rate limits are enforced **per API key** using [Unkey](https://unkey.com):
+
+| Header / field | Description |
+| --- | --- |
+| `429 RATE_LIMITED` | Limit exceeded |
+| `Retry-After` | Seconds until the window resets |
+| `error.metadata.remaining` | Remaining requests (when available) |
+
+Default limit: **100 requests / 60 seconds** per key.
+
+## Local development
+
+When Unkey is not configured, set `DEV_API_KEY` in the backend `.env`:
+
+```
+DEV_API_KEY=gal_dev_test_key_12345
+```
+
+Use this key as your Bearer token. Rate limiting falls back to an in-memory dev limiter.
+
+## Required environment variables (Unkey)
+
+For production API key management, configure:
+
+| Variable | Description |
+| --- | --- |
+| `UNKEY_ROOT_KEY` | Unkey root key with key-management permissions |
+| `UNKEY_API_ID` | Unkey API ID for your Galaxy project |
+| `UNKEY_RATELIMIT_NAMESPACE` | Rate limit namespace (default: `galaxy-api`) |
+| `UNKEY_RATELIMIT_NAME` | Rate limit name attached to keys (default: `requests`) |
+| `UNKEY_RATELIMIT_LIMIT` | Requests per window (default: `100`) |
+| `UNKEY_RATELIMIT_DURATION_MS` | Window size in ms (default: `60000`) |

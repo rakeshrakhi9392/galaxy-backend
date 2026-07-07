@@ -1,0 +1,136 @@
+---
+title: Setup
+description: Local development setup for the Galaxy API backend and frontend
+---
+
+This guide covers running the Galaxy stack locally so you can develop and test API integrations.
+
+## Prerequisites
+
+| Requirement | Version |
+| --- | --- |
+| Node.js | 22+ (see `.nvmrc`) |
+| pnpm | 9+ |
+| PostgreSQL | 14+ |
+| Trigger.dev | Account + project (for workflow execution) |
+
+## Clone and install
+
+```bash
+git clone <your-repo-url>
+cd galaxy
+
+# Backend
+cd backend
+pnpm install
+cp .env.example .env
+
+# Frontend
+cd ../frontend
+pnpm install
+cp .env.example .env.local
+```
+
+## Environment variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `TRIGGER_SECRET_KEY` | Yes | Trigger.dev secret for orchestration |
+| `TRIGGER_PROJECT_REF` | Yes | Trigger.dev project reference |
+| `CLERK_SECRET_KEY` | Yes* | Clerk backend key (UI auth) |
+| `CLERK_PUBLISHABLE_KEY` | Yes* | Clerk publishable key |
+| `FRONTEND_URL` | Yes* | JWT audience, e.g. `http://localhost:3000` |
+| `UNKEY_ROOT_KEY` | Prod | Unkey root key for API key management |
+| `UNKEY_API_ID` | Prod | Unkey API ID |
+| `DEV_API_KEY` | Dev | Fallback key when Unkey is unset |
+| `OPENROUTER_API_KEY` | Optional | LLM node provider |
+
+\* Required for the web UI. API key auth (`gal_…`) works independently for programmatic access.
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_BACKEND_URL` | Backend URL, default `http://localhost:4010` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
+| `CLERK_SECRET_KEY` | Clerk secret (server components) |
+
+## Database
+
+```bash
+cd backend
+pnpm db:migrate
+pnpm seed
+```
+
+The seed script creates a dev user, sample workflows, and a dev API key record tied to `DEV_API_KEY`.
+
+## Start services
+
+Open three terminals:
+
+**Terminal 1 — Backend API (port 4010)**
+
+```bash
+cd backend
+pnpm dev
+```
+
+**Terminal 2 — Trigger.dev worker**
+
+```bash
+cd backend
+pnpm trigger:dev
+```
+
+**Terminal 3 — Frontend (port 3000)**
+
+```bash
+cd frontend
+pnpm dev
+```
+
+## Verify the API
+
+```bash
+# Health check via public node catalog (no auth)
+curl http://localhost:4010/api/v1/nodes
+
+# Authenticated request with dev key
+curl http://localhost:4010/api/v1/workflows \
+  -H "Authorization: Bearer gal_dev_test_key_12345"
+```
+
+## API key management (local)
+
+Without Unkey, use the seeded dev key:
+
+```
+DEV_API_KEY=gal_dev_test_key_12345
+```
+
+Create additional keys in the UI at `http://localhost:3000/workflows/settings/api-keys` once Unkey is configured.
+
+## OpenAPI spec (local)
+
+```bash
+curl http://localhost:4010/api/v1/openapi.json
+```
+
+Regenerate the docs copy after spec changes:
+
+```bash
+cd backend
+pnpm generate:openapi
+```
+
+## Production deployment notes
+
+- Set all backend secrets via your hosting provider (Vercel, Railway, etc.)
+- Point `FRONTEND_URL` at your production frontend origin
+- Configure Unkey for production API keys and rate limits
+- Ensure Trigger.dev worker is deployed and connected to the same project
+- Serve Mintlify docs from the `docs/` folder (see repo `docs/README.md`)

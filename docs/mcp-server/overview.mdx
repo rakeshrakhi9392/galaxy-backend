@@ -1,0 +1,30 @@
+---
+title: "MCP Server Overview"
+description: "Connect AI assistants to Galaxy using the Model Context Protocol."
+---
+
+Galaxy exposes a remote Model Context Protocol (MCP) server so assistants like Claude, Cursor, and Windsurf can build, run, and monitor workflows from chat.
+
+## Endpoint
+
+```
+{BACKEND_URL}/api/mcp
+```
+
+Authenticate with the same Bearer API key you use for the REST API (`gal_…` prefix).
+
+## What you can do
+
+- **Run workflows** — start by name or ID, poll status, cancel mid-run
+- **Build workflows** — create scaffolds, add nodes, connect ports
+- **Browse the catalog** — list node types, ports, and categories
+- **Check credits** — balance and estimates before expensive runs
+
+## Transport
+
+The server implements MCP **Streamable HTTP** (POST initialize + session, GET SSE stream, DELETE to close session).
+
+## Next steps
+
+- [Setup](/mcp-server/setup) — connect Claude Desktop, Claude Code, or Cursor
+- [Available Tools](/mcp-server/tools) — full tool reference

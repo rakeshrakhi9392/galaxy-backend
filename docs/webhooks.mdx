@@ -1,0 +1,148 @@
+---
+title: Webhooks
+description: Receive outbound lifecycle events for workflow runs
+---
+
+Galaxy can POST webhook events to your HTTPS endpoints when runs progress. Register endpoints via the API or UI, then verify signatures on receipt.
+
+## Register an endpoint
+
+```bash
+curl -X POST https://api.galaxy.ai/api/v1/webhooks \
+  -H "Authorization: Bearer $GALAXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/galaxy/webhooks",
+    "events": ["RUN_STARTED", "RUN_COMPLETED", "RUN_FAILED", "NODE_COMPLETED"],
+    "enabled": true
+  }'
+```
+
+The response includes a **signing secret** (shown once). Store it to verify incoming payloads.
+
+## Event types
+
+| Event | When emitted |
+| --- | --- |
+| `RUN_STARTED` | Run transitions to `RUNNING` |
+| `NODE_COMPLETED` | A node finishes successfully |
+| `RUN_COMPLETED` | Run finishes with `SUCCESS` |
+| `RUN_FAILED` | Run finishes with `FAILED` |
+
+## Payload format
+
+All events share this envelope:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "RUN_COMPLETED",
+  "createdAt": "2026-07-06T12:00:00.000Z",
+  "data": { }
+}
+```
+
+### RUN_STARTED / RUN_COMPLETED
+
+```json
+{
+  "id": "…",
+  "type": "RUN_STARTED",
+  "createdAt": "2026-07-06T12:00:00.000Z",
+  "data": {
+    "run": {
+      "id": "run_…",
+      "workflowId": "wf_…",
+      "status": "RUNNING",
+      "scope": "FULL",
+      "initiator": "API",
+      "targetNodeIds": [],
+      "estimatedCredits": 1000,
+      "actualCredits": null,
+      "startedAt": "2026-07-06T12:00:00.000Z",
+      "finishedAt": null,
+      "errorSummary": null,
+      "createdAt": "2026-07-06T12:00:00.000Z"
+    }
+  }
+}
+```
+
+### RUN_FAILED
+
+Same as above, plus `data.errorSummary`.
+
+### NODE_COMPLETED
+
+```json
+{
+  "id": "…",
+  "type": "NODE_COMPLETED",
+  "createdAt": "2026-07-06T12:00:05.000Z",
+  "data": {
+    "runId": "run_…",
+    "nodeRun": {
+      "id": "nr_…",
+      "nodeId": "llm_1",
+      "nodeType": "openrouter-llm",
+      "status": "SUCCESS",
+      "startedAt": "2026-07-06T12:00:01.000Z",
+      "finishedAt": "2026-07-06T12:00:05.000Z",
+      "provider": "openrouter"
+    }
+  }
+}
+```
+
+## Signature verification
+
+Each request includes a `Galaxy-Signature` header:
+
+```
+Galaxy-Signature: t=1720200000,v1=abc123…
+```
+
+- `t` — Unix timestamp (seconds) when the payload was signed
+- `v1` — HMAC-SHA256 hex digest of `{t}.{raw_body}` using your endpoint secret
+
+### Node.js example
+
+```javascript
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verifyGalaxyWebhook(secret, rawBody, signatureHeader) {
+  const parts = Object.fromEntries(
+    signatureHeader.split(",").map((p) => {
+      const [k, ...rest] = p.split("=");
+      return [k.trim(), rest.join("=")];
+    }),
+  );
+  const timestamp = Number(parts.t);
+  const signature = parts.v1;
+  if (!timestamp || !signature) return false;
+
+  const expected = createHmac("sha256", secret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest("hex");
+
+  return timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"));
+}
+```
+
+<Warning>
+  Reject events whose timestamp differs from your server clock by more than 5 minutes to prevent replay attacks.
+</Warning>
+
+## Retries
+
+Galaxy retries failed deliveries up to **3 times** with backoff (0s, 1s, 3s). Delivery logs are stored per endpoint for debugging.
+
+## Request headers
+
+| Header | Value |
+| --- | --- |
+| `Content-Type` | `application/json` |
+| `Galaxy-Signature` | `t=…,v1=…` |
+| `User-Agent` | `Galaxy-Webhooks/1.0` |
+
+Your endpoint should respond with **2xx** within 15 seconds.

@@ -1,0 +1,67 @@
+{
+  "name": "galaxy-flow-backend",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "next dev -p 4010",
+    "build": "pnpm generate:nodes && prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "prisma": "prisma",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "seed": "pnpm db:seed",
+    "postinstall": "prisma generate",
+    "generate:nodes": "tsx src/scripts/generateNodeRegistry.ts",
+    "generate:openapi": "tsx src/scripts/generateOpenApi.ts",
+    "verify:mcp": "verify-mcp.cmd",
+    "trigger:dev": "pnpm exec trigger dev start --env-file .env"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@clerk/backend": "^2.4.0",
+    "@galaxy/schemas": "file:./src/schemas",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@transloadit/node": "^4.11.0",
+    "@trigger.dev/sdk": "4.5.0",
+    "@unkey/api": "^2.3.4",
+    "@unkey/ratelimit": "^2.1.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "next": "15.5.20",
+    "pg": "^8.22.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@trigger.dev/build": "4.5.0",
+    "trigger.dev": "4.5.0",
+    "@types/ffmpeg-static": "^5.1.0",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.5.2",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.20",
+    "postcss": "^8.5.16",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^3.4.19",
+    "tsx": "^4.22.4",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}

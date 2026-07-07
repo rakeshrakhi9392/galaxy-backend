@@ -1,0 +1,2839 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Galaxy Workflow API",
+    "version": "1.0.0",
+    "description": "Execute AI workflows programmatically. Authenticate with a Bearer API key (`gal_…`). Rate limits apply per API key via Unkey. Outbound webhooks emit run lifecycle events.",
+    "contact": {
+      "name": "Galaxy",
+      "url": "https://galaxy.ai"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.galaxy.ai",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:4010",
+      "description": "Local backend"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Documentation",
+      "description": "Machine-readable API specification"
+    },
+    {
+      "name": "Workflows",
+      "description": "Workflow CRUD and execution"
+    },
+    {
+      "name": "Runs",
+      "description": "Workflow run status and history"
+    },
+    {
+      "name": "Nodes",
+      "description": "Node catalog and credit estimation"
+    },
+    {
+      "name": "API Keys",
+      "description": "Manage programmatic access keys"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Outbound webhook endpoint registration"
+    },
+    {
+      "name": "Credits",
+      "description": "Account credit balance and ledger"
+    },
+    {
+      "name": "Uploads",
+      "description": "File upload configuration and proxy"
+    }
+  ],
+  "paths": {
+    "/api/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "Documentation"
+        ],
+        "summary": "OpenAPI specification",
+        "operationId": "getOpenApiSpec",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Get account summary",
+        "operationId": "getAccount",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account credit balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "List workflows",
+        "operationId": "listWorkflows",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated workflow list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Create workflow",
+        "operationId": "createWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workflow created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/estimate-credits": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Estimate workflow credits",
+        "operationId": "estimateWorkflowCredits",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowEstimateCreditsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Credit estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowEstimateCreditsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/validate-limits": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Validate provider input limits",
+        "operationId": "validateWorkflowLimits",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateLimitsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation issues (empty when valid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateLimitsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/{workflowId}": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Get workflow",
+        "operationId": "getWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDocument"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Save workflow graph",
+        "description": "Replace nodes, edges, and viewport. Supports optimistic concurrency via `expectedVersion`.",
+        "operationId": "saveWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workflow saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Version conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Update workflow metadata",
+        "operationId": "updateWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workflow updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDocument"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Delete workflow",
+        "operationId": "deleteWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Workflow deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/{workflowId}/runs": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "List workflow runs",
+        "operationId": "listWorkflowRuns",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Start workflow run",
+        "description": "Enqueue a workflow run. Poll `GET /api/v1/runs/{runId}` until status is terminal. Optionally pass `idempotencyKey` to safely retry.",
+        "operationId": "createWorkflowRun",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkflowId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRunCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Run enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/InsufficientCredits"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Get run status",
+        "description": "Returns run metadata and all node runs with outputs.",
+        "operationId": "getRun",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run with node runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunFetchWithNodesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/cancel": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Cancel workflow run",
+        "description": "Cancel a queued or running workflow run.",
+        "operationId": "cancelWorkflowRun",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/system-workflows": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "List system workflows",
+        "operationId": "listSystemWorkflows",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System workflow templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemWorkflowsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/system-workflows/{slug}": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Get system workflow",
+        "operationId": "getSystemWorkflow",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SystemWorkflowSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System workflow document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDocument"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/nodes": {
+      "get": {
+        "tags": [
+          "Nodes"
+        ],
+        "summary": "List node catalog",
+        "description": "Public node definitions for building workflows.",
+        "operationId": "listNodes",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Node catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodesListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/nodes/estimate-credits": {
+      "post": {
+        "tags": [
+          "Nodes"
+        ],
+        "summary": "Estimate node credits",
+        "operationId": "estimateNodeCredits",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NodesEstimateCreditsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-node estimates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodesEstimateCreditsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys": {
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "List API keys",
+        "description": "Returns masked keys (prefix only). Full secrets are shown once at creation.",
+        "operationId": "listApiKeys",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeysListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Create API key",
+        "operationId": "createApiKey",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created — store the secret immediately",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "description": "Unkey not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys/{apiKeyId}": {
+      "delete": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Revoke API key",
+        "operationId": "revokeApiKey",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ApiKeyId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Key revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List webhook endpoints",
+        "operationId": "listWebhooks",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registered webhook endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Register webhook endpoint",
+        "operationId": "createWebhook",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook registered — store the signing secret immediately",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointCreateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{webhookId}": {
+      "patch": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Update webhook endpoint",
+        "operationId": "updateWebhook",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointUpdateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Delete webhook endpoint",
+        "operationId": "deleteWebhook",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Webhook deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/credits/balance": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Get credit balance",
+        "operationId": "getCreditBalance",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditBalanceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/credits/transactions": {
+      "get": {
+        "tags": [
+          "Credits"
+        ],
+        "summary": "List credit transactions",
+        "operationId": "listCreditTransactions",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ledger transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditTransactionsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/config": {
+      "get": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Get upload configuration",
+        "description": "Public upload limits and whether uploads are enabled.",
+        "operationId": "getUploadsConfig",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Upload config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadsConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Upload a file",
+        "description": "Multipart upload. Field name must be `file`.",
+        "operationId": "uploadFile",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "description": "Uploads not configured"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key",
+        "description": "Galaxy API key prefixed with `gal_`. Example: `Authorization: Bearer gal_live_…`"
+      }
+    },
+    "parameters": {
+      "WorkflowId": {
+        "name": "workflowId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RunId": {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SystemWorkflowSlug": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ApiKeyId": {
+        "name": "apiKeyId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "WebhookId": {
+        "name": "webhookId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorBody"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorBody"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorBody"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds until the limit resets"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorBody"
+            }
+          }
+        }
+      },
+      "InsufficientCredits": {
+        "description": "Not enough credits to start the run",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiErrorBody"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiErrorBody": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "BAD_REQUEST",
+                  "NOT_FOUND",
+                  "UNAUTHORIZED",
+                  "FORBIDDEN",
+                  "RATE_LIMITED",
+                  "INSUFFICIENT_CREDITS",
+                  "VERSION_CONFLICT",
+                  "INVALID_GRAPH",
+                  "INTERNAL_ERROR"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "cause": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "retryability": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "retry_after",
+                  "backoff"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "WorkflowDocument": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "SYSTEM"
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "position"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "source",
+                "target"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "sourceHandle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "targetHandle": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "zoom": {
+                "type": "number"
+              }
+            }
+          },
+          "version": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkflowListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SystemWorkflowListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "slug": {
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkflowsListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowListItem"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SystemWorkflowsListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemWorkflowListItem"
+            }
+          }
+        }
+      },
+      "WorkflowCreateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "position"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "source",
+                "target"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "sourceHandle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "targetHandle": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "graph": {
+            "type": "object",
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "position"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "object",
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "source",
+                    "target"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    },
+                    "sourceHandle": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "targetHandle": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "viewport": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "zoom": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkflowSaveRequest": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type",
+                "position"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "source",
+                "target"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "sourceHandle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "targetHandle": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "zoom": {
+                "type": "number"
+              }
+            }
+          },
+          "graph": {
+            "type": "object",
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "position"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "object",
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "source",
+                    "target"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    },
+                    "sourceHandle": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "targetHandle": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "viewport": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "zoom": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "WorkflowUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkflowRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workflowId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "FULL",
+              "SINGLE",
+              "SELECTION"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCESS",
+              "FAILED",
+              "CANCELLED",
+              "SKIPPED"
+            ]
+          },
+          "initiator": {
+            "type": "string",
+            "enum": [
+              "UI",
+              "API",
+              "MCP"
+            ]
+          },
+          "targetNodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimatedCredits": {
+            "type": "integer",
+            "nullable": true
+          },
+          "actualCredits": {
+            "type": "integer",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "errorSummary": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkflowRunCreateRequest": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "FULL",
+              "SINGLE",
+              "SELECTION"
+            ],
+            "default": "FULL"
+          },
+          "targetNodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "graph": {
+            "type": "object",
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "position"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "object",
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "source",
+                    "target"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    },
+                    "sourceHandle": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "targetHandle": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "viewport": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "zoom": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "WorkflowRunResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/WorkflowRun"
+          }
+        }
+      },
+      "WorkflowRunsListResponse": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRun"
+            }
+          }
+        }
+      },
+      "NodeRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "workflowRunId": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "nodeType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "resolvedInput": {
+            "nullable": true
+          },
+          "resolvedOutput": {
+            "nullable": true
+          },
+          "output": {
+            "nullable": true
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "RunFetchWithNodesResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/WorkflowRun"
+          },
+          "nodeRuns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeRun"
+            }
+          }
+        }
+      },
+      "NodeCatalogEntry": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "ui": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "NodesListResponse": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeCatalogEntry"
+            }
+          }
+        }
+      },
+      "EstimateCreditsNode": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "subModelId": {
+            "type": "string"
+          }
+        }
+      },
+      "NodesEstimateCreditsRequest": {
+        "type": "object",
+        "required": [
+          "nodes"
+        ],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/EstimateCreditsNode"
+            }
+          }
+        }
+      },
+      "WorkflowEstimateCreditsRequest": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/EstimateCreditsNode"
+            }
+          },
+          "graph": {
+            "type": "object",
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "position"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "object",
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "source",
+                    "target"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    },
+                    "sourceHandle": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "targetHandle": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "viewport": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "zoom": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "targetNodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        }
+      },
+      "MicrocreditEstimate": {
+        "type": "object",
+        "properties": {
+          "microcredits": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "NodesEstimateCreditsResponse": {
+        "type": "object",
+        "properties": {
+          "estimates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MicrocreditEstimate"
+            }
+          }
+        }
+      },
+      "WorkflowEstimateCreditsResponse": {
+        "type": "object",
+        "properties": {
+          "totalMicrocredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "estimates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MicrocreditEstimate"
+            }
+          }
+        }
+      },
+      "ValidateLimitsNode": {
+        "type": "object",
+        "required": [
+          "nodeId",
+          "nodeType",
+          "inputs"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "nodeType": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "ValidateLimitsRequest": {
+        "type": "object",
+        "required": [
+          "nodes"
+        ],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ValidateLimitsNode"
+            }
+          }
+        }
+      },
+      "ValidateLimitsIssue": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "nodeType": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidateLimitsResponse": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidateLimitsIssue"
+            }
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "First 12 characters of the key"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ApiKeyCreateRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "ApiKeyCreateResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "$ref": "#/components/schemas/ApiKey"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Full API key — shown once"
+          }
+        }
+      },
+      "ApiKeysListResponse": {
+        "type": "object",
+        "properties": {
+          "apiKeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKey"
+            }
+          }
+        }
+      },
+      "WebhookEndpoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "RUN_STARTED",
+                "RUN_COMPLETED",
+                "RUN_FAILED",
+                "NODE_COMPLETED"
+              ]
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookEndpointCreateRequest": {
+        "type": "object",
+        "required": [
+          "url",
+          "events"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "RUN_STARTED",
+                "RUN_COMPLETED",
+                "RUN_FAILED",
+                "NODE_COMPLETED"
+              ]
+            }
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "WebhookEndpointCreateResponse": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/WebhookEndpoint"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Signing secret — shown once"
+          }
+        }
+      },
+      "WebhookEndpointUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "RUN_STARTED",
+                "RUN_COMPLETED",
+                "RUN_FAILED",
+                "NODE_COMPLETED"
+              ]
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WebhookEndpointUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "$ref": "#/components/schemas/WebhookEndpoint"
+          }
+        }
+      },
+      "WebhookEndpointsListResponse": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebhookEndpoint"
+            }
+          }
+        }
+      },
+      "WebhookPayload": {
+        "type": "object",
+        "description": "Outbound webhook event body",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RUN_STARTED",
+              "RUN_COMPLETED",
+              "RUN_FAILED",
+              "NODE_COMPLETED"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "CreditBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "availableBalance": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "formatted": {
+            "type": "string"
+          },
+          "hasActiveSubscription": {
+            "type": "boolean"
+          },
+          "isOrganization": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreditTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GRANT",
+              "RUN_CHARGE",
+              "RUN_REFUND",
+              "ADJUSTMENT"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "balanceAfter": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "referenceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "referenceId": {
+            "type": "string",
+            "nullable": true
+          },
+          "workflowRunId": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreditTransactionsListResponse": {
+        "type": "object",
+        "properties": {
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreditTransaction"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AccountResponse": {
+        "type": "object",
+        "properties": {
+          "creditBalance": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "UploadsConfigResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "maxAudioBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "maxVideoBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "maxImageBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "maxPdfBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "minAudioBytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "minVideoBytes": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "UploadResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "integer"
+          },
+          "filename": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}

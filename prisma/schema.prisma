@@ -1,0 +1,292 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- enums ----------
+
+enum WorkflowRunScope {
+  FULL
+  SINGLE
+  SELECTION
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+  SKIPPED
+}
+
+enum RunInitiator {
+  UI
+  API
+  MCP
+}
+
+enum ProviderAttemptStatus {
+  SUCCESS
+  FAILED
+  TIMEOUT
+  SKIPPED
+}
+
+enum CreditTxnType {
+  GRANT
+  RUN_CHARGE
+  RUN_REFUND
+  ADJUSTMENT
+}
+
+enum WebhookEvent {
+  RUN_STARTED
+  RUN_COMPLETED
+  RUN_FAILED
+  NODE_COMPLETED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum WorkflowType {
+  USER
+  SYSTEM
+}
+
+// ---------- identity ----------
+
+model User {
+  id            String   @id
+  email         String?
+  creditBalance Int      @default(100000000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workflows          Workflow[]
+  creditTransactions CreditTransaction[]
+  apiKeys            ApiKey[]
+  webhookEndpoints   WebhookEndpoint[]
+  workflowRuns       WorkflowRun[]
+}
+
+// ---------- workflows ----------
+
+model Workflow {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  type        WorkflowType @default(USER)
+  graph       Json
+  version     Int          @default(1)
+
+  thumbnailUrl String?
+
+  slug String? @unique
+
+  runs WorkflowRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@index([type, updatedAt(sort: Desc)])
+}
+
+// ---------- execution ----------
+
+model WorkflowRun {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  scope     WorkflowRunScope
+  status    RunStatus      @default(QUEUED)
+  initiator RunInitiator   @default(UI)
+
+  targetNodeIds String[] @default([])
+
+  graphSnapshot Json
+
+  triggerRunId String? @unique
+
+  estimatedCredits Int?
+  actualCredits    Int?
+
+  idempotencyKey String?
+
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorSummary String?
+
+  apiKeyId String?
+  apiKey   ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  nodeRuns           NodeRun[]
+  creditTransactions CreditTransaction[]
+  webhookDeliveries  WebhookDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workflowId, idempotencyKey])
+  @@index([workflowId, createdAt(sort: Desc)])
+  @@index([ownerId, createdAt(sort: Desc)])
+  @@index([status, startedAt])
+}
+
+model NodeRun {
+  id            String      @id @default(cuid())
+  workflowRunId String
+  workflowRun   WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  nodeId   String
+  nodeType String
+  attempt  Int    @default(1)
+
+  status       RunStatus @default(QUEUED)
+  triggerRunId String?   @unique
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  resolvedInput  Json?
+  resolvedOutput Json?
+
+  provider String?
+  error    Json?
+
+  logPreview String?
+
+  estimatedCredits Int?
+  actualCredits    Int?
+
+  providerAttempts ProviderAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workflowRunId, nodeId, attempt])
+  @@index([workflowRunId, createdAt])
+  @@index([nodeId])
+  @@index([status])
+}
+
+model ProviderAttempt {
+  id        String  @id @default(cuid())
+  nodeRunId String
+  nodeRun   NodeRun @relation(fields: [nodeRunId], references: [id], onDelete: Cascade)
+
+  provider   String
+  status     ProviderAttemptStatus
+  durationMs Int?
+  error      String?
+  errorCode  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([nodeRunId, createdAt])
+  @@index([provider, status, createdAt])
+}
+
+// ---------- credits ----------
+
+model CreditTransaction {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type         CreditTxnType
+  amount       Int
+  balanceAfter Int
+
+  referenceType String?
+  referenceId   String?
+
+  workflowRunId String?
+  workflowRun   WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([workflowRunId])
+}
+
+// ---------- public API ----------
+
+model ApiKey {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name       String
+  keyPrefix  String
+  unkeyKeyId String @unique
+
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  workflowRuns WorkflowRun[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, revokedAt])
+}
+
+// ---------- outbound webhooks ----------
+
+model WebhookEndpoint {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url     String
+  secret  String
+  events  WebhookEvent[]
+  enabled Boolean        @default(true)
+
+  deliveries WebhookDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id         String          @id @default(cuid())
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  workflowRunId String?
+  workflowRun   WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+
+  eventId   String
+  event     WebhookEvent
+  payload   Json
+  status    WebhookDeliveryStatus @default(PENDING)
+  attempts  Int                   @default(0)
+  lastError String?
+  deliveredAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([endpointId, eventId])
+  @@index([endpointId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@index([workflowRunId])
+}

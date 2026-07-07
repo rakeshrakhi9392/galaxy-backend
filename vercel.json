@@ -1,0 +1,9 @@
+# Galaxy Backend API — Vercel
+# https://vercel.com/docs/project-configuration
+
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
+  "outputDirectory": ".next"
+}
