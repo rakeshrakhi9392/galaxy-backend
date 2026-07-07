@@ -18,6 +18,14 @@ type GlobalMcpStore = {
 
 const SESSION_TTL_MS = 1000 * 60 * 60;
 
+function mcpAuthInfo(auth: RequestAuth) {
+  return {
+    token: auth.userId,
+    clientId: auth.userId,
+    scopes: ["mcp"],
+  };
+}
+
 function getStore(): GlobalMcpStore {
   const globalKey = "__galaxy_mcp_sessions__" as const;
   const root = globalThis as typeof globalThis & { [globalKey]?: GlobalMcpStore };
@@ -98,7 +106,7 @@ export async function handleMcpRequest(
 
   if (!session && parsedBody !== undefined && isInitializeRequest(parsedBody)) {
     session = await createSession(auth);
-    return session.transport.handleRequest(req, { parsedBody, authInfo: { token: auth.userId } });
+    return session.transport.handleRequest(req, { parsedBody, authInfo: mcpAuthInfo(auth) });
   }
 
   if (!session) {
@@ -115,7 +123,7 @@ export async function handleMcpRequest(
   assertSameUser(session, auth);
   return session.transport.handleRequest(req, {
     ...(parsedBody !== undefined ? { parsedBody } : {}),
-    authInfo: { token: auth.userId },
+    authInfo: mcpAuthInfo(auth),
   });
 }
 

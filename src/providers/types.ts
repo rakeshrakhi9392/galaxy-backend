@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { ProviderContext } from "./contextTypes";
 
 export type {
   ProviderAttemptRecord,

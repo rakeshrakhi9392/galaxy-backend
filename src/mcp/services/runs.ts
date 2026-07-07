@@ -134,7 +134,7 @@ export async function getRunStatus(ownerId: string, runId: string) {
 
   const terminal = ["SUCCESS", "FAILED", "CANCELLED"].includes(run.status);
   const responseNodeRun = run.nodeRuns.find((nodeRun) => nodeRun.nodeType === "response");
-  const responseOutput = responseNodeRun?.resolvedOutput ?? responseNodeRun?.output;
+  const responseOutput = responseNodeRun?.resolvedOutput;
 
   return {
     run: toWorkflowRunApi(run),

@@ -124,7 +124,7 @@ async function mergeWithConcat(localPaths: string[], outputPath: string): Promis
 async function mergeWithXfade(
   localPaths: string[],
   outputPath: string,
-  transition: MergeVideoTransition,
+  transition: Exclude<MergeVideoTransition, "none">,
 ): Promise<void> {
   const probes = await Promise.all(localPaths.map((path) => probeMediaFull(path)));
   const { width, height } = resolveTargetDimensions(probes);

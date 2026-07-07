@@ -25,6 +25,8 @@ import {
   type ProviderLimitViolation,
 } from "./providerInputLimits";
 
+export type { ProviderLimitViolation };
+
 function textLength(value: unknown): number {
   return typeof value === "string" ? value.length : 0;
 }

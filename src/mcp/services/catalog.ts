@@ -20,7 +20,9 @@ export function estimateCreditsForWorkflow(graph: WorkflowGraph, targetNodeIds: 
 export function estimateCreditsForNodes(
   nodes: Array<{ type: string; data?: Record<string, unknown>; subModelId?: string }>,
 ) {
-  return estimateNodesMicrocredits(nodes);
+  return estimateNodesMicrocredits(
+    nodes.map((node) => ({ ...node, data: node.data ?? {} })),
+  );
 }
 
 export function formatCredits(microcredits: number) {

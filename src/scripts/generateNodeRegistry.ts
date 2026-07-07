@@ -1,12 +1,32 @@
-import { writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { catalogNodes } from "../nodes/catalog";
 import type { NodeCreditEstimator } from "../nodes/types";
 import * as galaxySchemas from "../schemas/index";
 import { getNodeInputSchema, getNodeOutputSchema } from "../schemas/nodeSchemas";
 import { validateNodeDefinitionHandleTypes } from "../schemas/schemaHandleTypes";
 
-const OUT_PATH = resolve(__dirname, "../../../frontend/src/generated/nodeRegistry.ts");
+function resolveOutPath(): string {
+  if (process.env.FRONTEND_REGISTRY_PATH?.trim()) {
+    return resolve(process.env.FRONTEND_REGISTRY_PATH.trim());
+  }
+
+  const frontendRoots = [
+    resolve(__dirname, "../../../frontend"),
+    resolve(__dirname, "../../../madasu-trial-frontend-main"),
+    resolve(__dirname, "../../../galaxy-frontend"),
+  ];
+
+  for (const root of frontendRoots) {
+    if (existsSync(root)) {
+      return resolve(root, "src/generated/nodeRegistry.ts");
+    }
+  }
+
+  return resolve(__dirname, "../../../frontend/src/generated/nodeRegistry.ts");
+}
+
+const OUT_PATH = resolveOutPath();
 
 function serialize(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -146,6 +166,7 @@ export function listNodeTypes(): string[] {
 }
 `;
 
+  mkdirSync(dirname(OUT_PATH), { recursive: true });
   writeFileSync(OUT_PATH, source, "utf8");
   console.log(`Wrote ${OUT_PATH}`);
 }

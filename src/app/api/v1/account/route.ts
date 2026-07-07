@@ -4,7 +4,7 @@ import { handleApiError, jsonOk, parseWithSchema } from "@/lib/api";
 import { getAuth } from "@/lib/auth";
 import { getCreditBalance } from "@/lib/creditsLedger";
 
-export const AccountResponseSchema = z.object({
+const AccountResponseSchema = z.object({
   creditBalance: z.number().int(),
 });
 
