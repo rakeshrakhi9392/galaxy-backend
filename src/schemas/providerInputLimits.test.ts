@@ -157,6 +157,14 @@ describe("validateExtractAudioLimits", () => {
     });
     expect(issues.some((issue) => issue.message.includes("resolution"))).toBe(true);
   });
+
+  it("does not fail-closed for urls without metadata hints", async () => {
+    const issues = await validateExtractAudioLimits({
+      video_url: "https://tmp-hd833ap.transloadit.com/scratch/video123",
+      format: "mp3",
+    });
+    expect(issues.some((issue) => issue.message.includes("unable to verify"))).toBe(false);
+  });
 });
 
 describe("validateProviderLimitsFromHints", () => {

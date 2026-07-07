@@ -380,6 +380,7 @@ export async function validateExtractAudioLimits(
           maxResolutionPx: limits.maxResolutionPx,
         },
         { bytes: true, duration: true, resolution: true },
+        false,
       )),
     );
   }
