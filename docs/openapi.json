@@ -6,12 +6,12 @@
     "description": "Execute AI workflows programmatically. Authenticate with a Bearer API key (`gal_…`). Rate limits apply per API key via Unkey. Outbound webhooks emit run lifecycle events.",
     "contact": {
       "name": "Galaxy",
-      "url": "https://galaxy.ai"
+      "url": "https://galaxy-backend-kappa.vercel.app"
     }
   },
   "servers": [
     {
-      "url": "https://api.galaxy.ai",
+      "url": "https://galaxy-backend-kappa.vercel.app",
       "description": "Production"
     },
     {

@@ -8,7 +8,7 @@ Galaxy can POST webhook events to your HTTPS endpoints when runs progress. Regis
 ## Register an endpoint
 
 ```bash
-curl -X POST https://api.galaxy.ai/api/v1/webhooks \
+curl -X POST https://galaxy-backend-kappa.vercel.app/api/v1/webhooks \
   -H "Authorization: Bearer $GALAXY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

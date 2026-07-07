@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/context";
 import { resolveMiddlewareBearerAuth } from "@/lib/auth/middleware-auth";
 import { ApiError, apiErrorToBody, handleApiError } from "@/lib/api";
+import { applyCorsHeaders, corsHeaders, corsPreflightResponse } from "@/lib/cors";
 
 const PUBLIC_PREFIXES = [
   "/api/v1/nodes",
@@ -30,7 +31,12 @@ function getBearerToken(req: NextRequest): string | null {
   return authHeader.slice("Bearer ".length).trim() || null;
 }
 
-function errorResponse(err: unknown) {
+function withCors(response: NextResponse, origin: string | null): NextResponse {
+  applyCorsHeaders(response.headers, origin);
+  return response;
+}
+
+function errorResponse(err: unknown, origin: string | null) {
   if (err instanceof ApiError) {
     const body = apiErrorToBody(err.code, err.message, {
       cause: err.cause,
@@ -38,25 +44,33 @@ function errorResponse(err: unknown) {
       retryability: err.retryability,
       details: err.details,
     });
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...corsHeaders(origin) };
     if (err.code === "RATE_LIMITED" && err.metadata?.reset != null) {
       headers["Retry-After"] = String(err.metadata.reset);
     }
     return NextResponse.json(body, { status: err.status, headers });
   }
 
-  return handleApiError(err);
+  return withCors(handleApiError(err), origin);
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const origin = req.headers.get("origin");
+
+  if (pathname.startsWith("/api/v1/") && req.method === "OPTIONS") {
+    return corsPreflightResponse(origin);
+  }
 
   if (!pathname.startsWith("/api/v1/") || isPublicPath(pathname)) {
+    if (pathname.startsWith("/api/v1/")) {
+      return withCors(NextResponse.next(), origin);
+    }
     return NextResponse.next();
   }
 
   if (isSseEventsPath(pathname)) {
-    return NextResponse.next();
+    return withCors(NextResponse.next(), origin);
   }
 
   const signedAuth = req.headers.get(AUTH_CONTEXT_HEADER)?.trim();
@@ -66,11 +80,14 @@ export async function middleware(req: NextRequest) {
       const requestHeaders = stripIdentityHeaders(req.headers);
       requestHeaders.set(AUTH_CONTEXT_HEADER, await encodeAuthContext(auth));
 
-      return NextResponse.next({
-        request: { headers: requestHeaders },
-      });
+      return withCors(
+        NextResponse.next({
+          request: { headers: requestHeaders },
+        }),
+        origin,
+      );
     } catch (err) {
-      return errorResponse(err);
+      return errorResponse(err, origin);
     }
   }
 
@@ -80,6 +97,7 @@ export async function middleware(req: NextRequest) {
       new ApiError(401, "UNAUTHORIZED", "Authentication required", {
         cause: "missing_bearer_token",
       }),
+      origin,
     );
   }
 
@@ -87,19 +105,25 @@ export async function middleware(req: NextRequest) {
     const auth = await resolveMiddlewareBearerAuth(token);
 
     if (auth === "defer") {
-      return NextResponse.next({
-        request: { headers: stripIdentityHeaders(req.headers) },
-      });
+      return withCors(
+        NextResponse.next({
+          request: { headers: stripIdentityHeaders(req.headers) },
+        }),
+        origin,
+      );
     }
 
     const requestHeaders = stripIdentityHeaders(req.headers);
     requestHeaders.set(AUTH_CONTEXT_HEADER, await encodeAuthContext(auth));
 
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return withCors(
+      NextResponse.next({
+        request: { headers: requestHeaders },
+      }),
+      origin,
+    );
   } catch (err) {
-    return errorResponse(err);
+    return errorResponse(err, origin);
   }
 }
 

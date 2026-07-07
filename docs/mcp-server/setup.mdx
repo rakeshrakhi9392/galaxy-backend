@@ -13,7 +13,7 @@ Add to `.cursor/mcp.json` (or Cursor MCP settings):
 {
   "mcpServers": {
     "galaxy": {
-      "url": "http://localhost:4010/api/mcp",
+      "url": "https://galaxy-backend-kappa.vercel.app/api/mcp",
       "headers": {
         "Authorization": "Bearer gal_your_api_key_here"
       }
@@ -21,8 +21,6 @@ Add to `.cursor/mcp.json` (or Cursor MCP settings):
   }
 }
 ```
-
-Replace the URL with your deployed backend in production.
 
 ## Claude Desktop
 
@@ -32,7 +30,7 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "galaxy": {
-      "url": "http://localhost:4010/api/mcp",
+      "url": "https://galaxy-backend-kappa.vercel.app/api/mcp",
       "headers": {
         "Authorization": "Bearer gal_your_api_key_here"
       }
@@ -44,7 +42,7 @@ Add to `claude_desktop_config.json`:
 ## Claude Code
 
 ```bash
-claude mcp add galaxy --transport http http://localhost:4010/api/mcp \
+claude mcp add galaxy --transport http https://galaxy-backend-kappa.vercel.app/api/mcp \
   --header "Authorization: Bearer gal_your_api_key_here"
 ```
 
@@ -56,7 +54,7 @@ Add to Windsurf MCP settings (same HTTP transport as Cursor):
 {
   "mcpServers": {
     "galaxy": {
-      "url": "http://localhost:4010/api/mcp",
+      "url": "https://galaxy-backend-kappa.vercel.app/api/mcp",
       "headers": {
         "Authorization": "Bearer gal_your_api_key_here"
       }

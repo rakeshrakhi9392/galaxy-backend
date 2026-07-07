@@ -16,7 +16,7 @@ Navigate to **Settings → API Keys** in the workflow builder and click **Create
 Requires an existing session (Clerk JWT) or an already-valid API key:
 
 ```bash
-curl -X POST https://api.galaxy.ai/api/v1/api-keys \
+curl -X POST https://galaxy-backend-kappa.vercel.app/api/v1/api-keys \
   -H "Authorization: Bearer gal_live_…" \
   -H "Content-Type: application/json" \
   -d '{"name": "Production"}'
@@ -47,7 +47,7 @@ Response:
 Include the key in the `Authorization` header on every request:
 
 ```bash
-curl https://api.galaxy.ai/api/v1/workflows \
+curl https://galaxy-backend-kappa.vercel.app/api/v1/workflows \
   -H "Authorization: Bearer gal_live_abc123…"
 ```
 
@@ -55,11 +55,11 @@ curl https://api.galaxy.ai/api/v1/workflows \
 
 ```bash
 # List (masked)
-curl https://api.galaxy.ai/api/v1/api-keys \
+curl https://galaxy-backend-kappa.vercel.app/api/v1/api-keys \
   -H "Authorization: Bearer gal_live_…"
 
 # Revoke
-curl -X DELETE https://api.galaxy.ai/api/v1/api-keys/{apiKeyId} \
+curl -X DELETE https://galaxy-backend-kappa.vercel.app/api/v1/api-keys/{apiKeyId} \
   -H "Authorization: Bearer gal_live_…"
 ```
 

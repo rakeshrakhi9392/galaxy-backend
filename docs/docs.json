@@ -13,13 +13,13 @@
     "links": [
       {
         "label": "Dashboard",
-        "href": "https://galaxy.ai"
+        "href": "https://galaxy-frontend-five.vercel.app"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Get API Key",
-      "href": "https://galaxy.ai/workflows/settings/api-keys"
+      "href": "https://galaxy-frontend-five.vercel.app/workflows/settings/api-keys"
     }
   },
   "navigation": {

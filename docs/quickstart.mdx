@@ -10,7 +10,7 @@ Create a key in the [Galaxy UI](https://galaxy.ai/workflows/settings/api-keys) o
 ## 2. Find a workflow ID
 
 ```bash
-curl https://api.galaxy.ai/api/v1/workflows \
+curl https://galaxy-backend-kappa.vercel.app/api/v1/workflows \
   -H "Authorization: Bearer $GALAXY_API_KEY"
 ```
 
@@ -19,7 +19,7 @@ Copy a workflow `id` from the response.
 ## 3. Start a run
 
 ```bash
-curl -X POST "https://api.galaxy.ai/api/v1/workflows/$WORKFLOW_ID/runs" \
+curl -X POST "https://galaxy-backend-kappa.vercel.app/api/v1/workflows/$WORKFLOW_ID/runs" \
   -H "Authorization: Bearer $GALAXY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{}'
@@ -42,7 +42,7 @@ Response:
 ## 4. Poll until complete
 
 ```bash
-curl "https://api.galaxy.ai/api/v1/runs/$RUN_ID" \
+curl "https://galaxy-backend-kappa.vercel.app/api/v1/runs/$RUN_ID" \
   -H "Authorization: Bearer $GALAXY_API_KEY"
 ```
 

@@ -12,11 +12,14 @@ export const openApiSpec = {
       "Rate limits apply per API key via Unkey. Outbound webhooks emit run lifecycle events.",
     contact: {
       name: "Galaxy",
-      url: "https://galaxy.ai",
+      url: "https://galaxy-backend-kappa.vercel.app",
     },
   },
   servers: [
-    { url: "https://api.galaxy.ai", description: "Production" },
+    {
+      url: "https://galaxy-backend-kappa.vercel.app",
+      description: "Production",
+    },
     { url: "http://localhost:4010", description: "Local backend" },
   ],
   tags: [

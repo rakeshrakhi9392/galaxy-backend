@@ -8,10 +8,10 @@ Next.js REST API, workflow orchestrator, provider runtime, Prisma/PostgreSQL per
 
 | Resource | URL |
 | --- | --- |
-| API base | `https://YOUR-API.vercel.app/api/v1` |
-| OpenAPI | `https://YOUR-API.vercel.app/api/v1/openapi.json` |
-| MCP | `https://YOUR-API.vercel.app/api/mcp` |
-| Docs (Mintlify) | `https://YOUR-SUBDOMAIN.mintlify.app` |
+| API base | `https://galaxy-backend-kappa.vercel.app/api/v1` |
+| OpenAPI | `https://galaxy-backend-kappa.vercel.app/api/v1/openapi.json` |
+| MCP | `https://galaxy-backend-kappa.vercel.app/api/mcp` |
+| Docs (Mintlify) | `https://abcd-311b96b4.mintlify.app` |
 
 ---
 

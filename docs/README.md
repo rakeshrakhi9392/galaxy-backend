@@ -31,7 +31,7 @@ Configuration lives in `docs/docs.json` (Mintlify's current format). Preview loc
 2. Go to [Mintlify Dashboard](https://dashboard.mintlify.com) → **New docs**.
 3. Connect the GitHub repository.
 4. Set **Docs directory** to `docs` (at the backend repo root).
-5. Choose a subdomain, e.g. `galaxy-api` → live at `https://galaxy-api.mintlify.app`.
+5. Choose a subdomain, e.g. `abcd-311b96b4` → live at `https://abcd-311b96b4.mintlify.app`.
 6. Click **Deploy**.
 
 Mintlify auto-redeploys on every push to the default branch.
@@ -48,7 +48,7 @@ Update these URLs to your live Mintlify domain:
 Example sidebar link:
 
 ```tsx
-href: "https://galaxy-api.mintlify.app/introduction"
+href: "https://abcd-311b96b4.mintlify.app/introduction"
 ```
 
 ## OpenAPI spec sync
