@@ -4,8 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["**/*.integration.test.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    include: ["**/*.integration.test.ts", "**/*.msw.integration.test.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
+    setupFiles: ["./src/test/msw/setupIntegration.ts"],
     testTimeout: 120_000,
   },
   resolve: {
