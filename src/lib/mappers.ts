@@ -1,5 +1,6 @@
 import type { Prisma, RunStatus, WorkflowRunScope, WorkflowType } from "@prisma/client";
 import { graphFromUnknown } from "@/lib/graphNormalize";
+import { parseWorkflowGraph } from "@galaxy/schemas";
 import type { WorkflowDocument, WorkflowGraph } from "@galaxy/schemas";
 
 type DbWorkflow = {
@@ -72,7 +73,14 @@ type DbNodeRun = {
 };
 
 export function storedGraphToWorkflowGraph(graph: Prisma.JsonValue): WorkflowGraph {
-  return graphFromUnknown(graph);
+  // For API serialization we should not auto-inject protected scaffold nodes.
+  // Stored graphs are expected to already contain whatever nodes the client saved.
+  try {
+    return parseWorkflowGraph(graph);
+  } catch {
+    // Fallback: older/legacy stored graphs might need normalization/migration.
+    return graphFromUnknown(graph);
+  }
 }
 
 export function toWorkflowDocument(w: DbWorkflow): WorkflowDocument {

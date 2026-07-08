@@ -1,5 +1,5 @@
 import type { WorkflowGraph } from "./graph";
-import { graphFromUnknown } from "./graphNormalize";
+import { parseWorkflowGraph } from "./graph";
 
 export const REQUEST_NODE_TYPE = "request";
 
@@ -79,7 +79,12 @@ export function resolveExecutionNodeIds(
   graph: unknown,
   targetNodeIds: readonly string[],
 ): Set<string> {
-  const g = graphFromUnknown(graph);
+  let g: WorkflowGraph;
+  try {
+    g = parseWorkflowGraph(graph);
+  } catch {
+    return new Set();
+  }
   const { incoming, outgoing } = buildAdjacency(g);
 
   if (targetNodeIds.length === 0) {

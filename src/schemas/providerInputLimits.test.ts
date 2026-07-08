@@ -54,6 +54,7 @@ describe("validateKlingV3ProLimits", () => {
       duration: 16,
       negative_prompt: "",
       generate_audio: true,
+      cfg_scale: 0.5,
       elements: [],
     });
     expect(issues.some((issue) => issue.field === "duration")).toBe(true);

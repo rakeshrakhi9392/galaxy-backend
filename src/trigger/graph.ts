@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { WorkflowGraph, WorkflowNode } from "@galaxy/schemas";
-import { graphFromUnknown, REQUEST_NODE_TYPE, resolveExecutionNodeIds } from "@galaxy/schemas";
+import { parseWorkflowGraph, REQUEST_NODE_TYPE, resolveExecutionNodeIds } from "@galaxy/schemas";
 
 export { REQUEST_NODE_TYPE, resolveExecutionNodeIds };
 
@@ -32,7 +32,10 @@ export type WorkflowNodeLegacy = z.infer<typeof ReactFlowNodeSchema>;
 export type WorkflowRunScope = "FULL" | "SINGLE" | "SELECTION";
 
 export function parseWorkflowGraphForExecution(graph: unknown): WorkflowGraph {
-  return graphFromUnknown(graph);
+  // IMPORTANT: execution scheduling must not auto-inject protected scaffold nodes,
+  // otherwise scheduler planning utilities would operate on nodes the caller
+  // didn't provide.
+  return parseWorkflowGraph(graph);
 }
 
 /** Label a run from how many target node IDs arrived (none / one / two+). */
