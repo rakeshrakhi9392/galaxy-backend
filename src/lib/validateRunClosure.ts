@@ -109,7 +109,14 @@ export function validateRunClosureInputs(
 
   for (const edge of subgraph.edges) {
     const list = incomingByTarget.get(edge.target) ?? [];
-    list.push({ targetHandle: edge.targetHandle });
+    const edgeData =
+      edge.data && typeof edge.data === "object" && !Array.isArray(edge.data)
+        ? (edge.data as Record<string, unknown>)
+        : {};
+    const targetHandle =
+      edge.targetHandle ??
+      (typeof edgeData.targetHandle === "string" ? edgeData.targetHandle : null);
+    list.push({ targetHandle });
     incomingByTarget.set(edge.target, list);
   }
 
