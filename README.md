@@ -15,146 +15,30 @@ Next.js REST API, workflow orchestrator, provider runtime, Prisma/PostgreSQL per
 
 ---
 
-## Architecture
+## Setup Instructions
 
-```
-REST /api/v1          Clerk JWT  +  API keys (gal_…)
-        │
-        ▼
-Route handlers ──► Prisma/PostgreSQL (workflows, runs, credits, audit)
-        │
-        ▼
-Trigger.dev ──► orchestrate-workflow-run
-        │
-        ├── topological waves (parallel within, sequential across)
-        ├── inline: request, response nodes
-        └── child tasks: execute-node-{type}
-                │
-                ▼
-        Provider chain (retries, timeout, fallback)
-                │
-                ▼
-        OpenRouter · FFmpeg · webhook stubs (image/video)
-```
+### Prerequisites
 
-| Layer | Path | Responsibility |
-| --- | --- | --- |
-| Schemas | `src/schemas/` (`@galaxy/schemas`) | Shared Zod — API, UI, execution |
-| Node catalog | `src/nodes/catalog/` | One file per node type |
-| Providers | `src/providers/` | Swappable `NodeProvider` implementations |
-| Orchestrator | `src/lib/runOrchestration.ts` | DAG validation, waves, credits |
-| Trigger tasks | `src/trigger/tasks/` | Durable node execution |
-| OpenAPI | `src/lib/openapi/` + `docs/openapi.json` | Generated spec |
-| Docs | `docs/` | Mintlify site |
+Node.js 22+, pnpm 9+, PostgreSQL 14+, Trigger.dev account, Clerk account
 
-### Execution model
-
-1. `POST /workflows/:id/runs` creates a `WorkflowRun` and enqueues `orchestrate-workflow-run`.
-2. Orchestrator topologically sorts the graph, rejects cycles, batches nodes into waves.
-3. Remote nodes dispatch via `batch.triggerByTaskAndWait`.
-4. Each task runs `executeNode` → `runProviderChain` with per-provider retries.
-5. Progress streams via Trigger realtime metadata + `WorkflowNodeRun` rows.
-
-### Auth
-
-| Method | Use case |
-| --- | --- |
-| Clerk JWT | Browser sessions (via frontend) |
-| API key `gal_…` | Programmatic REST + MCP |
-| `AUTH_DISABLED=true` | Local dev only — maps to seeded mock user |
-
----
-
-## Design decisions
-
-### `@galaxy/schemas` as single source of truth
-
-Workflow graphs, node I/O, API bodies, and UI field config share Zod schemas. No duplicated TypeScript interfaces.
-
-### Node catalog + codegen
-
-Each node is a config object in `catalog/<type>.ts`. `pnpm generate:nodes` syncs the Trigger task registry and frontend `nodeRegistry.ts`.
-
-### Provider chain abstraction
-
-Orchestrator never imports provider SDKs. Nodes declare ordered provider lists; swapping backends requires zero orchestrator changes.
-
-### Trigger.dev for orchestration
-
-Long-lived, parallel, webhook-capable execution with `triggerAndWait`, `wait.forToken`, and deployed FFmpeg workers.
-
----
-
-## Trade-offs
-
-| Choice | Benefit | Cost |
-| --- | --- | --- |
-| Next.js route handlers | Same stack as frontend | Not a dedicated API framework |
-| Stub image/video providers | Demonstrates webhook-wait without paid keys | Not production integrations |
-| `DEV_API_KEY` fallback | Simple reviewer testing | Not full Unkey lifecycle in dev |
-| Credit ledger in Postgres | Auditable billing | No optimistic concurrency yet |
-
----
-
-## Prerequisites
-
-- Node.js 22+
-- pnpm 9+
-- PostgreSQL 14+
-- Trigger.dev account
-- Clerk account (UI auth)
-- Optional: OpenRouter, Transloadit, Unkey
-
----
-
-## Setup
-
-### 1. Install
+### Commands
 
 ```bash
 pnpm install
 cp .env.example .env
-```
+# fill in .env (see below)
 
-### 2. Environment variables
-
-| Variable | Required | Description |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `TRIGGER_SECRET_KEY` | Yes | Trigger.dev secret |
-| `TRIGGER_PROJECT_REF` | Yes | Trigger project ref |
-| `CLERK_SECRET_KEY` | UI auth | Clerk backend secret |
-| `CLERK_PUBLISHABLE_KEY` | UI auth | Clerk publishable key |
-| `FRONTEND_URL` | Yes | JWT audience — frontend origin |
-| `DEV_API_KEY` | Dev | Default `gal_dev_test_key_12345` |
-| `OPENROUTER_API_KEY` | Optional | Real LLM runs |
-| `UNKEY_ROOT_KEY`, `UNKEY_API_ID` | Prod | API key management |
-
-### 3. Database
-
-```bash
 pnpm db:migrate
 pnpm seed
-```
 
-Seeds:
-
-- Demo user `user_mock_clerk_123` / `demo@galaxy.ai`
-- System workflow templates
-- "Demo workflow" (request → LLM → response)
-- Dev API key record matching `DEV_API_KEY`
-
-### 4. Run
-
-```bash
-# Terminal 1 — API (:4010)
+# Terminal 1
 pnpm dev
 
-# Terminal 2 — Trigger worker
+# Terminal 2
 pnpm trigger:dev
 ```
 
-### 5. Verify
+**Verify:**
 
 ```bash
 curl http://localhost:4010/api/v1/nodes
@@ -163,92 +47,135 @@ curl http://localhost:4010/api/v1/workflows \
   -H "Authorization: Bearer gal_dev_test_key_12345"
 ```
 
----
-
-## Deploy
-
-### API (Vercel / Railway)
-
-1. Set all env vars from `.env.example`.
-2. `pnpm build && pnpm start` (or platform default).
-3. Run migrations + seed against production DB:
+**Also:**
 
 ```bash
-DATABASE_URL="postgresql://…" pnpm db:migrate
-DATABASE_URL="postgresql://…" pnpm seed
+pnpm test
+pnpm lint
+pnpm generate:nodes
+pnpm generate:openapi
 ```
 
-4. Deploy Trigger worker:
+**Deploy:**
 
 ```bash
+pnpm build
 pnpm exec trigger deploy
 ```
 
-**Never** set `AUTH_DISABLED=true` in production.
+### Environment Variables
 
-### Mintlify docs
+| Variable | Example / Value |
+| --- | --- |
+| `DATABASE_URL` | `postgresql://galaxy:galaxy@localhost:5432/galaxy` |
+| `TRIGGER_SECRET_KEY` | from Trigger.dev dashboard |
+| `TRIGGER_PROJECT_REF` | `proj_xxxx` |
+| `FRONTEND_URL` | `http://localhost:3000` |
+| `CLERK_SECRET_KEY` | from Clerk dashboard |
+| `CLERK_PUBLISHABLE_KEY` | from Clerk dashboard |
+| `DEV_API_KEY` | `gal_dev_test_key_12345` |
+| `OPENROUTER_API_KEY` | for real LLM runs |
+| `TRANSLOADIT_AUTH_KEY` | for file uploads |
+| `TRANSLOADIT_AUTH_SECRET` | for file uploads |
+| `UNKEY_ROOT_KEY` | for API key mgmt (prod) |
+| `UNKEY_API_ID` | for API key mgmt (prod) |
+| `AUTH_DISABLED` | `true` — local auth bypass only |
+| `TRIGGER_INTEGRATION` | `1` — for integration tests |
 
-Docs live in `docs/`. Connect this repo in [Mintlify Dashboard](https://dashboard.mintlify.com), set docs directory to `docs`.
+---
 
-```bash
-pnpm generate:openapi   # refresh docs/openapi.json
+## Architecture Overview
+
+```
+Clients (Browser · REST API · MCP)
+              │
+              ▼
+        /api/v1  +  /api/mcp
+    Clerk JWT  ·  API keys (gal_…)
+              │
+              ▼
+       Next.js Route Handlers
+              │
+              ▼
+         Prisma / PostgreSQL
+   workflows · runs · credits · webhooks
+              │
+              ▼
+   Trigger.dev: orchestrate-workflow-run
+              │
+              ▼
+   orchestrateWorkflowRunCore (scheduler)
+              │
+    ┌─────────┴─────────┐
+    ▼                   ▼
+request/response    execute-node-{type}
+(inline)            (Trigger child tasks)
+                          │
+                          ▼
+                    executeNode
+                          │
+                          ▼
+                   Provider chain
+                          │
+                          ▼
+              OpenRouter · FFmpeg · stubs
 ```
 
-See `docs/README.md` for details.
+### Layers
+
+| Layer | Location | Role |
+| --- | --- | --- |
+| **Schemas** | `src/schemas/` (`@galaxy/schemas`) | Shared Zod types for graphs, node I/O, API, and UI config |
+| **Node catalog** | `src/nodes/catalog/` | One file per node — schemas, UI, credits, execution |
+| **Orchestrator** | `src/lib/runOrchestration.ts` | DAG scheduling, waves, credits, partial results |
+| **Trigger tasks** | `src/trigger/` | Durable orchestrator + per-node child tasks |
+| **Providers** | `src/providers/` | OpenRouter, FFmpeg, webhook stubs |
+| **API** | `src/app/api/v1/` | REST endpoints, auth, rate limits |
+| **MCP** | `src/mcp/` + `/api/mcp` | MCP server for external agents |
+| **Docs** | `docs/` | Mintlify + OpenAPI spec |
+
+### Execution Flow
+
+1. Client calls `POST /api/v1/workflows/:id/runs`
+2. Backend snapshots the graph, checks credits, creates `WorkflowRun`
+3. Trigger runs `orchestrate-workflow-run`
+4. Scheduler groups ready nodes into **waves** (parallel within a wave, sequential across waves)
+5. Each remote node runs as `execute-node-{type}` via `batch.triggerByTaskAndWait`
+6. Node calls provider chain → validates output with Zod
+7. Results saved to `NodeRun` + streamed via Trigger Realtime
+8. Credits deducted per successful node; webhooks fired on lifecycle events
+
+### Key Design Points
+
+- **Single source of truth** — `@galaxy/schemas` drives API, UI config, validation, and execution contracts
+- **Framework-agnostic core** — scheduling logic is plain TypeScript; Trigger.dev is the execution adapter
+- **Immutable snapshots** — each run stores its own graph copy for reproducible history
+- **Provider abstraction** — orchestrator never talks to external APIs directly
+- **One client path** — UI, REST, and MCP all use the same run creation pipeline
 
 ---
 
-## Codegen
+## Design Decisions & Trade-offs
 
-```bash
-pnpm generate:nodes     # → ../frontend/src/generated/nodeRegistry.ts (monorepo)
-pnpm generate:openapi   # → docs/openapi.json
-```
+### 1. Schema-Driven Node Architecture
 
-Both run automatically on `pnpm build`.
+Every workflow node is defined as a single contract containing its Zod schemas, UI configuration, credit estimation, and execution logic. The same definitions are shared across the frontend, backend, REST API, and MCP server, making it easy to add new node types without modifying the orchestrator. The trade-off is tighter coupling to the shared schema package, but it provides a single source of truth and prevents frontend/backend drift.
 
----
+### 2. Parallel DAG Execution with Trigger.dev
 
-## Testing
+The workflow engine executes independent nodes in parallel while respecting graph dependencies through topological execution. Trigger.dev is used as the execution engine, while the orchestration logic remains framework-agnostic and independently testable. This improves scalability and enables efficient execution of complex workflows, with the trade-off of introducing an external orchestration dependency.
 
-```bash
-pnpm test               # unit tests
-pnpm test:watch
-pnpm test:integration   # requires TRIGGER_INTEGRATION=1 + trigger:dev
-pnpm lint
-```
+### 3. Immutable Workflow Snapshots
+
+Each workflow run stores an immutable snapshot of the workflow graph at execution time instead of reading the latest workflow definition. This guarantees reproducible executions, reliable debugging, and accurate execution history even if a workflow is edited while a run is in progress. The trade-off is additional storage per run, which could be optimized in the future through snapshot deduplication.
 
 ---
 
-## Extending
+## What I'd Improve With More Time
 
-### Add a node
-
-1. Create `src/nodes/catalog/<type>.ts`
-2. Add Zod schemas in `src/schemas/nodes/`
-3. Register in `src/nodes/catalog/index.ts`
-4. `pnpm generate:nodes`
-
-### Add a provider
-
-1. Implement `NodeProvider` in `src/providers/<name>/`
-2. Wire into node's provider index
-3. No orchestrator changes
-
----
-
-## If there were more time
-
-- **Live OpenAI / Kling providers** behind existing `NodeProvider` interface
-- **Unkey everywhere** — create, revoke, rate-limit without dev fallback
-- **Optimistic concurrency** on credit balance updates
-- **CI pipeline** — lint, test, build, OpenAPI diff on every PR
-- **docker-compose** for Postgres + auto-seed
-- **Structured logging** with run/node/provider correlation IDs
-
----
-
-## Related
-
-- Frontend repo: React Flow editor
-- Submission checklist: `SUBMISSION.md` (monorepo root)
+- **Credit Reservation:** Reserve estimated credits before execution and capture only actual usage to prevent race conditions during concurrent runs.
+- **Asynchronous Webhooks:** Move webhook delivery to background jobs with retries and dead-letter handling so external endpoints don't delay workflow completion.
+- **Provider Retry Budget:** Add a configurable limit on provider retry attempts per workflow run to avoid excessive retries and unnecessary API usage.
+- **Snapshot Deduplication:** Store workflow graph snapshots using hash-based deduplication to reduce storage while preserving reproducibility.
+- **Scheduled & Event Triggers:** Support cron schedules and event-driven executions (e.g., webhooks) using the existing execution pipeline.
+- **Per-User Concurrency Limits:** Limit the number of simultaneous workflow executions per user with queueing to ensure fair resource utilization.
