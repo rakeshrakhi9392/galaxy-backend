@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPreRunOutputsByNodeId,
+  buildValidationOutputsByNodeId,
   resolveNodeInputs,
   buildRequestOutput,
   topologicalNodeOrder,
@@ -37,6 +38,32 @@ describe("resolveNodeInputs", () => {
     expect(buildPreRunOutputsByNodeId(graph)).toEqual({
       req: { field_1: "hello" },
       llm: { output: "prior run text" },
+    });
+  });
+
+  it("buildValidationOutputsByNodeId excludes cached lastOutput", () => {
+    const requestNode: WorkflowNode = {
+      id: "req",
+      type: "request",
+      position: { x: 0, y: 0 },
+      data: {
+        dynamicFields: [{ id: "field_1", name: "Prompt", type: "text", value: "hello" }],
+      },
+    };
+    const llmNode: WorkflowNode = {
+      id: "llm",
+      type: "llm",
+      position: { x: 0, y: 0 },
+      data: { lastOutput: { output: "prior run text" } },
+    };
+
+    const graph: WorkflowGraph = {
+      nodes: [requestNode, llmNode],
+      edges: [],
+    };
+
+    expect(buildValidationOutputsByNodeId(graph)).toEqual({
+      req: { field_1: "hello" },
     });
   });
 

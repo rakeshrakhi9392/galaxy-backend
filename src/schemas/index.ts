@@ -172,11 +172,13 @@ export {
 
 export {
   resolveNodeInputs,
+  buildValidationOutputsByNodeId,
   buildPreRunOutputsByNodeId,
   buildRequestOutput,
   countWiredInputsForField,
   edgesForGraph,
   topologicalNodeOrder,
+  wiredInputFieldKeysFromUpstreamNodes,
 } from "./resolveNodeInputs";
 
 export {

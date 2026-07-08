@@ -259,9 +259,24 @@ export function topologicalNodeOrder(graph: WorkflowGraph): WorkflowNode[] {
 }
 
 /**
- * Best-effort upstream outputs available before a workflow run.
- * Seeds request field values and cached lastOutput, then walks the graph in
- * topological order so downstream wired-input validation sees upstream data.
+ * Static request-field values available before a workflow run.
+ * Used for pre-run validation — does not include cached outputs from prior runs.
+ */
+export function buildValidationOutputsByNodeId(graph: WorkflowGraph): Record<string, unknown> {
+  const outputsByNodeId: Record<string, unknown> = {};
+
+  for (const node of graph.nodes) {
+    if (node.type === "request") {
+      outputsByNodeId[node.id] = buildRequestOutput(node);
+    }
+  }
+
+  return outputsByNodeId;
+}
+
+/**
+ * Best-effort upstream outputs for credit estimation and editor previews.
+ * Includes cached lastOutput from prior runs; not used for pre-run validation.
  */
 export function buildPreRunOutputsByNodeId(graph: WorkflowGraph): Record<string, unknown> {
   const outputsByNodeId: Record<string, unknown> = {};
@@ -279,6 +294,28 @@ export function buildPreRunOutputsByNodeId(graph: WorkflowGraph): Record<string,
   }
 
   return outputsByNodeId;
+}
+
+/** Input fields wired from upstream nodes (excluding request sources). */
+export function wiredInputFieldKeysFromUpstreamNodes(
+  graph: WorkflowGraph,
+  nodeId: string,
+  options?: { excludeSourceTypes?: readonly string[] },
+): Set<string> {
+  const exclude = new Set(options?.excludeSourceTypes ?? ["request"]);
+  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const keys = new Set<string>();
+
+  for (const edge of graph.edges) {
+    if (edge.target !== nodeId) continue;
+    const field = inputFieldFromHandle(edge.targetHandle ?? null);
+    if (!field) continue;
+    const sourceType = nodesById.get(edge.source)?.type;
+    if (!sourceType || exclude.has(sourceType)) continue;
+    keys.add(field);
+  }
+
+  return keys;
 }
 
 export function buildRequestOutput(node: WorkflowNode): Record<string, unknown> {

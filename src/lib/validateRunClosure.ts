@@ -1,9 +1,5 @@
 import type { WorkflowGraph, WorkflowNode } from "@galaxy/schemas";
-import {
-  buildPreRunOutputsByNodeId,
-  inputFieldFromHandle,
-  resolveNodeInputs,
-} from "@galaxy/schemas";
+import { inputFieldFromHandle } from "@galaxy/schemas";
 import { nodeRegistry } from "@/nodes/registry";
 import { resolveFieldLabel } from "@/nodes/fieldMeta";
 import type { NodeUiField } from "@/nodes/types";
@@ -78,21 +74,12 @@ function fieldSatisfiedInClosure(
   node: WorkflowNode,
   field: NodeUiField,
   incomingByTarget: Map<string, Array<{ targetHandle: string | null | undefined }>>,
-  subgraph: WorkflowGraph,
-  preRunOutputs: Record<string, unknown>,
 ): boolean {
   const inputs = nodeInputsRecord(node);
   if (hasConfiguredValue(inputs[field.key])) return true;
 
   const incoming = incomingByTarget.get(node.id) ?? [];
-  if (incoming.some((edge) => edgeTargetsField(edge.targetHandle, field))) return true;
-
-  const resolved = resolveNodeInputs({
-    node,
-    graph: subgraph,
-    outputsByNodeId: preRunOutputs,
-  });
-  return hasConfiguredValue(resolved[field.key]);
+  return incoming.some((edge) => edgeTargetsField(edge.targetHandle, field));
 }
 
 /**
@@ -115,7 +102,6 @@ export function validateRunClosureInputs(
   }
 
   const subgraph = buildExecutionSubgraph(graph, targetNodeIds);
-  const preRunOutputs = buildPreRunOutputsByNodeId(subgraph);
   const incomingByTarget = new Map<
     string,
     Array<{ targetHandle: string | null | undefined }>
@@ -133,7 +119,7 @@ export function validateRunClosureInputs(
 
     for (const field of def.ui.fields) {
       if (!fieldRequiredForNode(node, field)) continue;
-      if (fieldSatisfiedInClosure(node, field, incomingByTarget, subgraph, preRunOutputs)) {
+      if (fieldSatisfiedInClosure(node, field, incomingByTarget)) {
         continue;
       }
 
